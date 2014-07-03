@@ -396,9 +396,9 @@ typedef uint32_t Pixel;
         startX = std::floor(realX);
         endX = std::min(std::floor(realX + pixelRatio), (double)srcWidth-1);
         for (int srcY=startY; srcY<=endY; ++srcY) {
-          if (srcY == startY) {
+          if (srcY == startY && startY != endY) {
             yFrac = fmod(srcY+1, pixelRatio);
-          } else if (srcY == endY) {
+          } else if (srcY == endY && startY != endY) {
             yFrac = 1-fmod(srcY+1, pixelRatio);
           } else {
             yFrac = 1;
@@ -407,9 +407,9 @@ typedef uint32_t Pixel;
           
           const Pixel* srcRowBegin = srcBegin + (srcY * srcStridePixels);
           for (int srcX=startX; srcX<=endX; srcX++) {
-            if (srcX == startX) {
+            if (srcX == startX && startX != endX) {
               xFrac = fmod(srcX+1, pixelRatio);
-            } else if (srcX == endX) {
+            } else if (srcX == endX && startX != endX) {
               xFrac = 1-fmod(srcX+1, pixelRatio);
             } else {
               xFrac = 1;
