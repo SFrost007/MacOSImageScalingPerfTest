@@ -131,7 +131,7 @@ typedef uint32_t Pixel;
 
 - (NSBitmapImageRep*) imageRepForScalingAlgorithm:(ScalingAlgorithm)algorithm
 {
-  NSString *path = [[NSBundle mainBundle] pathForResource:@"small" ofType:@"png"];
+  NSString *path = [[NSBundle mainBundle] pathForResource:@"screen" ofType:@"png"];
   NSData *inputData = [NSData dataWithContentsOfFile:path];
   NSBitmapImageRep *inputImage = [[NSBitmapImageRep alloc] initWithData:inputData];
   
@@ -182,11 +182,39 @@ typedef uint32_t Pixel;
   Pixel* destEnd = destBegin + destLengthPixels;
   
   // Windows 8 requires us to fill the margins, otherwise window ends up transparent
-  // TODO: Is this too expensive? We only really need to write in the margins
+  // Benchmarked and memset (method 2) is twice as quick as method 1, and almost 3x
+  // quicker than method 3
+  
+  /* Method 1
   Pixel* wipePixel = destBegin;
   while (wipePixel < destEnd) {
     *(wipePixel++) = mask_op(0);
   }
+  //*/
+  
+  // Method 2
+  memset(destBegin, mask_op(0), destLengthBytes);
+  
+  /* Method 3
+  Pixel* wipePixel = destBegin;
+  for (std::size_t row = 0; row < destHeight; row++) {
+    if (row < marginY || row > marginY + numRows) {
+      // In the top/bottom margin, fill the whole row
+      for (std::size_t col=0; col < destWidth; col++) {
+        *(wipePixel++) = mask_op(0);
+      }
+    } else {
+      // In the middle rows, only paint in the left/right margins
+      for (std::size_t col=0; col<destWidth; col++, wipePixel++) {
+        if (col < marginX || col > marginX + numCols) {
+          *(wipePixel) = mask_op(0);
+        }
+      }
+    }
+  }
+  //*/
+  
+  
   destBegin += (marginY * destStridePixels);
   
   if (algorithm == Raw) {
