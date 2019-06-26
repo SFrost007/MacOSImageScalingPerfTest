@@ -182,38 +182,74 @@ typedef uint32_t Pixel;
   Pixel* destEnd = destBegin + destLengthPixels;
   
   // Windows 8 requires us to fill the margins, otherwise window ends up transparent
-  // Benchmarked and memset (method 2) is twice as quick as method 1, and almost 3x
-  // quicker than method 3
+  // Benchmarked and memset (method 2) is twice as quick as method 3, and almost 3x
+  // quicker than method 1
   
-  /* Method 1
-  Pixel* wipePixel = destBegin;
-  while (wipePixel < destEnd) {
-    *(wipePixel++) = mask_op(0);
-  }
-  //*/
   
-  // Method 2
-  memset(destBegin, mask_op(0), destLengthBytes);
+  const int iterations = 50;
+  Pixel blankPixel = mask_op(0);
   
-  /* Method 3
-  Pixel* wipePixel = destBegin;
-  for (std::size_t row = 0; row < destHeight; row++) {
-    if (row < marginY || row > marginY + numRows) {
-      // In the top/bottom margin, fill the whole row
-      for (std::size_t col=0; col < destWidth; col++) {
-        *(wipePixel++) = mask_op(0);
+  
+  // Method 1
+  {
+    NSDate *start = [NSDate date];
+    for (int i=0; i<iterations; i++) {
+      Pixel* wipePixel = destBegin;
+      while (wipePixel < destEnd) {
+        *(wipePixel++) = blankPixel;
       }
-    } else {
-      // In the middle rows, only paint in the left/right margins
-      for (std::size_t col=0; col<destWidth; col++, wipePixel++) {
-        if (col < marginX || col > marginX + numCols) {
-          *(wipePixel) = mask_op(0);
+    }
+    NSTimeInterval duration = [[NSDate date] timeIntervalSinceDate:start];
+    NSLog(@"Method 1 time: %04f Average: %04f", duration, (duration / iterations));
+  }
+  
+  // Method 3
+  {
+    NSDate *start = [NSDate date];
+    for (int i=0; i<iterations; i++) {
+      memset(destBegin, blankPixel, destLengthBytes);
+    }
+    NSTimeInterval duration = [[NSDate date] timeIntervalSinceDate:start];
+    NSLog(@"Method 3 time: %04f Average: %04f", duration, (duration / iterations));
+  }
+  
+  // Method 4
+  {
+    NSDate *start = [NSDate date];
+    for (int i=0; i<iterations; i++) {
+      Pixel* wipePixel = destBegin;
+      for (std::size_t row = 0; row < destHeight; row++) {
+        if (row < marginY || row > marginY + numRows) {
+          // In the top/bottom margin, fill the whole row
+          for (std::size_t col=0; col < destWidth; col++) {
+            *(wipePixel++) = blankPixel;
+          }
+        } else {
+          // In the middle rows, only paint in the left/right margins
+          for (std::size_t col=0; col<destWidth; col++, wipePixel++) {
+            if (col < marginX || col > marginX + numCols) {
+              *(wipePixel) = blankPixel;
+            }
+          }
         }
       }
     }
+    NSTimeInterval duration = [[NSDate date] timeIntervalSinceDate:start];
+    NSLog(@"Method 4 time: %04f Average: %04f", duration, (duration / iterations));
   }
-  //*/
   
+  // Method 5
+  {
+    NSDate *start = [NSDate date];
+    for (int i=0; i<iterations; i++) {
+      std::fill(destBegin, destEnd, blankPixel);
+    }
+    NSTimeInterval duration = [[NSDate date] timeIntervalSinceDate:start];
+    NSLog(@"Method 5 time: %04f Average: %04f", duration, (duration / iterations));
+  }
+  
+  
+  NSDate *start = [NSDate date];
   
   destBegin += (marginY * destStridePixels);
   
@@ -576,6 +612,9 @@ typedef uint32_t Pixel;
     
     delete [] rowBuf;
   } // End algorithm if
+  
+  NSTimeInterval algoTime = [[NSDate date] timeIntervalSinceDate:start];
+  NSLog(@"Time to run scaling algorithm:   %04f", algoTime);
   
   return outputImage;
 }
